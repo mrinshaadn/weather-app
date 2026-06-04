@@ -3,92 +3,429 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather app</title>
+    <title>Realistic Climate - Premium Weather Forecast</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div class="card">
-        <div class="search">
-            <input type="text" placeholder="enter city name" spellcheck="false">
-            <button><img src="images/search.png"></button>
-        </div>
-        <div class="error">
-            <p>Invaild City Name</p>
-        </div>
-        <div class="weather">
-            <img src="images/rain.png" class="weather-icon">
-            <h1 class="temp">22°c</h1>
-            <h2 class="city">New York</h2>
-            <div class="details">
-                <div class="col">
-                    <img src="images/humidity.png" alt="">
-                    <div>
-                        <div class="humidity">50%</div>
-                        <p>Humidity</p>
+<body class="theme-default">
+    <div class="container">
+        <div class="card">
+            <!-- Header Controls -->
+            <div class="header-actions">
+                <div class="search">
+                    <input type="text" placeholder="Enter city name" spellcheck="false" id="search-input">
+                    <button id="search-btn" title="Search City"><img src="images/search.png" alt="Search"></button>
+                    <button id="location-btn" title="Use Current Location">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+                <div class="unit-toggle">
+                    <button class="unit-btn active" id="unit-metric" data-unit="metric">°C</button>
+                    <button class="unit-btn" id="unit-imperial" data-unit="imperial">°F</button>
+                </div>
+            </div>
+
+            <!-- Search History / Popular Cities -->
+            <div class="recent-searches" id="recent-searches-container">
+                <span class="recent-title">Recent:</span>
+                <div class="recent-tags" id="recent-tags">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+
+            <!-- Error State -->
+            <div class="error" id="error-message">
+                <p>Invalid City Name. Please try again.</p>
+            </div>
+
+            <!-- Weather Details Dashboard -->
+            <div class="weather" id="weather-dashboard">
+                <div class="main-weather">
+                    <img src="images/rain.png" class="weather-icon" id="main-weather-icon" alt="Weather condition">
+                    <div class="temp-city">
+                        <h1 class="temp" id="main-temp">--°c</h1>
+                        <h2 class="city" id="main-city">Loading...</h2>
+                        <p class="description" id="weather-desc">Clear Sky</p>
                     </div>
                 </div>
-                <div class="col">
-                    <img src="images/wind.png" alt="">
-                    <div>
-                        <div class="wind">15 km/h</div>
-                        <p>Wind Speed</p>
+
+                <!-- Primary details -->
+                <div class="details">
+                    <div class="col">
+                        <img src="images/humidity.png" alt="Humidity">
+                        <div>
+                            <div class="humidity" id="humidity-val">--%</div>
+                            <p>Humidity</p>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <img src="images/wind.png" alt="Wind Speed">
+                        <div>
+                            <div class="wind" id="wind-val">-- km/h</div>
+                            <p id="wind-lbl">Wind Speed</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Extended Stats Grid -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon-wrapper">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-val" id="feels-like-val">--°</span>
+                            <span class="stat-label">Feels Like</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-wrapper">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 6v6l4 2"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-val" id="pressure-val">-- hPa</span>
+                            <span class="stat-label">Pressure</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-wrapper">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-val" id="visibility-val">-- km</span>
+                            <span class="stat-label">Visibility</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-wrapper">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-val" id="sun-val">-- / --</span>
+                            <span class="stat-label">Sun Rise/Set</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5-Day Forecast -->
+                <div class="forecast-section">
+                    <h3>5-Day Forecast</h3>
+                    <div class="forecast-list" id="forecast-list">
+                        <!-- Populated by JS -->
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</body>
 
-<script>
-    const apiKey = "7329520e3bdd3cc3ddb432ded7d4ded0";
-    const apiUrl = "https://api.openweathermap.org/data/2.5/weather?&units=metric&q=";
-
-    const searchbox = document.querySelector(".search input");
-    const searchbtn = document.querySelector(".search button");
-    const weatherIcon = document.querySelector(".weather-icon")
-
-    async function checkWeather(city){
-        const response = await fetch(apiUrl + city + `&appid=${apiKey}`)
+    <script>
+        const apiKey = "7329520e3bdd3cc3ddb432ded7d4ded0";
         
-        if (response.status == 404){
-            document.querySelector(".error").style.display = 'block'
-            document.querySelector(".weather").style.display = 'none'
-        }else{
-                    let data = await response.json()
+        // Element references
+        const searchInput = document.getElementById("search-input");
+        const searchBtn = document.getElementById("search-btn");
+        const locationBtn = document.getElementById("location-btn");
+        const errorMsg = document.getElementById("error-message");
+        const weatherDashboard = document.getElementById("weather-dashboard");
+        const recentTagsContainer = document.getElementById("recent-tags");
+        const forecastList = document.getElementById("forecast-list");
+        
+        const unitMetric = document.getElementById("unit-metric");
+        const unitImperial = document.getElementById("unit-imperial");
 
-        // console.log(data);
+        // State variables
+        let currentCity = "London"; // default starting city
+        let currentCoords = null; // { lat, lon } when using geo-location
+        let currentUnit = "metric"; // 'metric' or 'imperial'
 
-        document.querySelector(".city").innerHTML = data.name;
-        document.querySelector(".temp").innerHTML = Math.round(data.main.temp ) + "°c";
-        document.querySelector(".humidity").innerHTML = data.main.humidity + "%";
-        document.querySelector(".wind").innerHTML = data.wind.speed + "km/h";
+        // Initialize App
+        window.addEventListener("DOMContentLoaded", () => {
+            loadSearchHistory();
+            fetchWeatherAndForecast();
+        });
 
-        if(data.weather[0].main == "Clouds"){
-            weatherIcon.src = "images/clouds.png"
-        }
-        else if(data.weather[0].main == "Clear"){
-            weatherIcon.src = "images/clear.png"
-        }
-        else if(data.weather[0].main == "Rain"){
-            weatherIcon.src = "images/rain.png"
-        }
-        else if(data.weather[0].main == "Drizzle"){
-            weatherIcon.src = "images/drizzle.png"
-        }
-        else if(data.weather[0].main == "Mist"){
-            weatherIcon.src = "images/mist.png"
+        // Search Handlers
+        searchBtn.addEventListener("click", () => {
+            if (searchInput.value.trim() !== "") {
+                currentCity = searchInput.value.trim();
+                currentCoords = null; // Clear coordinate lock
+                fetchWeatherAndForecast();
+            }
+        });
+
+        searchInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter" && searchInput.value.trim() !== "") {
+                currentCity = searchInput.value.trim();
+                currentCoords = null;
+                fetchWeatherAndForecast();
+            }
+        });
+
+        // Location GPS Handler
+        locationBtn.addEventListener("click", () => {
+            if (navigator.geolocation) {
+                locationBtn.classList.add("loading");
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        currentCoords = {
+                            lat: position.coords.latitude,
+                            lon: position.coords.longitude
+                        };
+                        currentCity = null; // Clear city string lock
+                        fetchWeatherAndForecast();
+                        locationBtn.classList.remove("loading");
+                    },
+                    (error) => {
+                        alert("Geolocation access denied or unavailable.");
+                        locationBtn.classList.remove("loading");
+                    }
+                );
+            } else {
+                alert("Geolocation is not supported by your browser.");
+            }
+        });
+
+        // Unit Toggle Handlers
+        unitMetric.addEventListener("click", () => {
+            if (currentUnit !== "metric") {
+                currentUnit = "metric";
+                unitMetric.classList.add("active");
+                unitImperial.classList.remove("active");
+                fetchWeatherAndForecast();
+            }
+        });
+
+        unitImperial.addEventListener("click", () => {
+            if (currentUnit !== "imperial") {
+                currentUnit = "imperial";
+                unitImperial.classList.add("active");
+                unitMetric.classList.remove("active");
+                fetchWeatherAndForecast();
+            }
+        });
+
+        // Master Fetch Functions
+        async function fetchWeatherAndForecast() {
+            try {
+                let weatherUrl, forecastUrl;
+                
+                if (currentCoords) {
+                    weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${currentCoords.lat}&lon=${currentCoords.lon}&units=${currentUnit}&appid=${apiKey}`;
+                    forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${currentCoords.lat}&lon=${currentCoords.lon}&units=${currentUnit}&appid=${apiKey}`;
+                } else {
+                    const encodedCity = encodeURIComponent(currentCity);
+                    weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodedCity}&units=${currentUnit}&appid=${apiKey}`;
+                    forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${encodedCity}&units=${currentUnit}&appid=${apiKey}`;
+                }
+
+                // Fetch Current Weather
+                const weatherRes = await fetch(weatherUrl);
+                if (!weatherRes.ok) throw new Error("City not found");
+                const weatherData = await weatherRes.json();
+
+                // Fetch Forecast
+                const forecastRes = await fetch(forecastUrl);
+                if (!forecastRes.ok) throw new Error("Forecast failed");
+                const forecastData = await forecastRes.json();
+
+                // Successful responses
+                errorMsg.style.display = "none";
+                weatherDashboard.style.display = "block";
+
+                // Update UI elements
+                updateCurrentWeather(weatherData);
+                updateForecast(forecastData);
+                updateBodyTheme(weatherData.weather[0].main);
+                
+                if (weatherData.name) {
+                    saveToSearchHistory(weatherData.name);
+                }
+            } catch (err) {
+                console.error(err);
+                errorMsg.style.display = "block";
+                weatherDashboard.style.display = "none";
+            }
         }
 
-        document.querySelector(".weather").style.display = "block"
-    }
+        // DOM Update - Current Weather
+        function updateCurrentWeather(data) {
+            const isMetric = currentUnit === "metric";
             
+            // City and general details
+            document.getElementById("main-city").innerHTML = data.name || "Current Location";
+            document.getElementById("main-temp").innerHTML = Math.round(data.main.temp) + (isMetric ? "°c" : "°f");
+            document.getElementById("weather-desc").innerHTML = data.weather[0].description;
+            document.getElementById("humidity-val").innerHTML = data.main.humidity + "%";
+            
+            // Wind speed unit formatting
+            const windSpeed = data.wind.speed;
+            const windFormatted = isMetric ? Math.round(windSpeed * 3.6) + " km/h" : Math.round(windSpeed) + " mph";
+            document.getElementById("wind-val").innerHTML = windFormatted;
+            document.getElementById("wind-lbl").innerHTML = "Wind Speed";
+
+            // Extended stats
+            document.getElementById("feels-like-val").innerHTML = Math.round(data.main.feels_like) + "°";
+            document.getElementById("pressure-val").innerHTML = data.main.pressure + " hPa";
+            
+            // Visibility (m to km or miles)
+            const visKm = (data.visibility / 1000).toFixed(1);
+            document.getElementById("visibility-val").innerHTML = isMetric ? visKm + " km" : (visKm * 0.621371).toFixed(1) + " mi";
+
+            // Sunrise & Sunset formatting
+            const sunriseTime = formatTime(data.sys.sunrise, data.timezone);
+            const sunsetTime = formatTime(data.sys.sunset, data.timezone);
+            document.getElementById("sun-val").innerHTML = `${sunriseTime} / ${sunsetTime}`;
+
+            // Weather Icon selector
+            const weatherIcon = document.getElementById("main-weather-icon");
+            const condition = data.weather[0].main;
+            setWeatherIconSrc(weatherIcon, condition);
         }
 
+        // DOM Update - Forecast
+        function updateForecast(data) {
+            forecastList.innerHTML = "";
+            const isMetric = currentUnit === "metric";
+            
+            // Filter forecast data to get one snapshot per day (e.g. at 12:00 PM)
+            // Or extract 5 spaced indices
+            const dailyData = data.list.filter(item => item.dt_txt.includes("12:00:00"));
+            
+            // Fallback in case 12:00:00 forecast isn't included yet for today
+            const finalForecasts = dailyData.length > 0 ? dailyData : data.list.filter((_, idx) => idx % 8 === 0).slice(0, 5);
 
+            finalForecasts.forEach(day => {
+                const dateObj = new Date(day.dt * 1000);
+                const dayName = dateObj.toLocaleDateString("en-US", { weekday: "short" });
+                const monthDay = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                const tempVal = Math.round(day.main.temp) + "°";
+                
+                const forecastCard = document.createElement("div");
+                forecastCard.className = "forecast-card";
 
-    searchbtn.addEventListener("click",()=>{
-        checkWeather(searchbox.value)
-    })
+                // Icon element
+                const imgEl = document.createElement("img");
+                setWeatherIconSrc(imgEl, day.weather[0].main);
 
-</script>
+                forecastCard.innerHTML = `
+                    <span class="forecast-day">${dayName}</span>
+                    <span class="forecast-date">${monthDay}</span>
+                `;
+                forecastCard.appendChild(imgEl);
+                
+                const tempEl = document.createElement("span");
+                tempEl.className = "forecast-temp";
+                tempEl.innerHTML = tempVal;
+                forecastCard.appendChild(tempEl);
+
+                const descEl = document.createElement("span");
+                descEl.className = "forecast-desc";
+                descEl.innerHTML = day.weather[0].main;
+                forecastCard.appendChild(descEl);
+
+                forecastList.appendChild(forecastCard);
+            });
+        }
+
+        // Shared helper for local/system timezone formatting
+        function formatTime(unixTimestamp, timezoneOffsetSeconds) {
+            // Local timezone corrections
+            const date = new Date((unixTimestamp + timezoneOffsetSeconds) * 1000);
+            const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+            const targetDate = new Date(utc + (3600000 * (timezoneOffsetSeconds / 3600)));
+            
+            let hours = targetDate.getHours();
+            const minutes = targetDate.getMinutes().toString().padStart(2, "0");
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // 0 should be 12
+            return `${hours}:${minutes} ${ampm}`;
+        }
+
+        function setWeatherIconSrc(imgElement, mainCondition) {
+            switch(mainCondition) {
+                case "Clouds":
+                    imgElement.src = "images/clouds.png";
+                    break;
+                case "Clear":
+                    imgElement.src = "images/clear.png";
+                    break;
+                case "Rain":
+                    imgElement.src = "images/rain.png";
+                    break;
+                case "Drizzle":
+                    imgElement.src = "images/drizzle.png";
+                    break;
+                case "Mist":
+                case "Smoke":
+                case "Haze":
+                case "Fog":
+                    imgElement.src = "images/mist.png";
+                    break;
+                case "Snow":
+                    imgElement.src = "images/snow.png";
+                    break;
+                default:
+                    imgElement.src = "images/clear.png";
+            }
+        }
+
+        // Dynamic theme management based on main condition
+        function updateBodyTheme(condition) {
+            document.body.className = ""; // clear themes
+            
+            const condClass = "theme-" + condition.toLowerCase();
+            const allowedThemes = ["theme-clear", "theme-clouds", "theme-rain", "theme-drizzle", "theme-mist", "theme-snow"];
+            
+            if (allowedThemes.includes(condClass)) {
+                document.body.classList.add(condClass);
+            } else {
+                document.body.classList.add("theme-default");
+            }
+        }
+
+        // Search history implementation
+        function loadSearchHistory() {
+            let history = JSON.parse(localStorage.getItem("weather_searches")) || ["London", "New York", "Tokyo", "Paris"];
+            recentTagsContainer.innerHTML = "";
+            history.forEach(city => {
+                const tag = document.createElement("span");
+                tag.className = "recent-tag";
+                tag.innerHTML = city;
+                tag.addEventListener("click", () => {
+                    currentCity = city;
+                    currentCoords = null;
+                    fetchWeatherAndForecast();
+                });
+                recentTagsContainer.appendChild(tag);
+            });
+        }
+
+        function saveToSearchHistory(cityName) {
+            let history = JSON.parse(localStorage.getItem("weather_searches")) || ["London", "New York", "Tokyo", "Paris"];
+            
+            // Remove duplicates
+            history = history.filter(c => c.toLowerCase() !== cityName.toLowerCase());
+            // Insert at beginning
+            history.unshift(cityName);
+            // Cap at 5 tags
+            if (history.length > 5) history.pop();
+
+            localStorage.setItem("weather_searches", JSON.stringify(history));
+            loadSearchHistory();
+        }
+    </script>
+</body>
 </html>
