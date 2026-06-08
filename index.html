@@ -146,15 +146,65 @@
         const unitImperial = document.getElementById("unit-imperial");
 
         // State variables
-        let currentCity = "London"; // default starting city
+        let currentCity = "Mumbai"; // default starting city
         let currentCoords = null; // { lat, lon } when using geo-location
         let currentUnit = "metric"; // 'metric' or 'imperial'
+
+        // List of popular Indian cities to match/initialize default search history
+        const indianCities = new Set([
+            "mumbai", "delhi", "bengaluru", "bangalore", "kolkata", "chennai", "hyderabad", "pune", "ahmedabad", "surat", 
+            "jaipur", "lucknow", "kanpur", "nagpur", "indore", "thane", "bhopal", "patna", "vadodara", "ghaziabad", 
+            "ludhiana", "agra", "nashik", "ranchi", "faridabad", "meerut", "rajkot", "varanasi", "srinagar", "aurangabad", 
+            "dhanbad", "amritsar", "navi mumbai", "allahabad", "howrah", "gwalior", "jabalpur", "coimbatore", "vijayawada", 
+            "jodhpur", "madurai", "raipur", "kota", "guwahati", "chandigarh", "solapur", "bareilly", "moradabad", "mysore", 
+            "gurugram", "gurgaon", "aligarh", "jalandhar", "tiruchirappalli", "bhubaneswar", "salem", "warangal", 
+            "thiruvananthapuram", "noida", "jamshedpur", "kochi", "cochin", "udaipur", "dehradun"
+        ]);
 
         // Initialize App
         window.addEventListener("DOMContentLoaded", () => {
             loadSearchHistory();
-            fetchWeatherAndForecast();
+            autoDetectLocation();
         });
+
+        // Automatically detect location
+        function autoDetectLocation() {
+            if (navigator.geolocation) {
+                locationBtn.classList.add("loading");
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        currentCoords = {
+                            lat: position.coords.latitude,
+                            lon: position.coords.longitude
+                        };
+                        currentCity = null; // Clear city string lock
+                        fetchWeatherAndForecast();
+                        locationBtn.classList.remove("loading");
+                    },
+                    (error) => {
+                        console.warn("Geolocation access denied/failed, falling back to history or default.");
+                        locationBtn.classList.remove("loading");
+                        fallbackToDefaultLocation();
+                    },
+                    { timeout: 6000 }
+                );
+            } else {
+                fallbackToDefaultLocation();
+            }
+        }
+
+        function fallbackToDefaultLocation() {
+            // Fallback: Use the first item in the loaded search history, or default to "Mumbai"
+            let history = JSON.parse(localStorage.getItem("weather_searches"));
+            if (history && history.length > 0) {
+                const firstCity = history[0];
+                currentCity = typeof firstCity === "string" ? firstCity : firstCity.name;
+            } else {
+                currentCity = "Mumbai";
+            }
+            currentCoords = null;
+            fetchWeatherAndForecast();
+        }
 
         // Search Handlers
         searchBtn.addEventListener("click", () => {
@@ -175,26 +225,7 @@
 
         // Location GPS Handler
         locationBtn.addEventListener("click", () => {
-            if (navigator.geolocation) {
-                locationBtn.classList.add("loading");
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        currentCoords = {
-                            lat: position.coords.latitude,
-                            lon: position.coords.longitude
-                        };
-                        currentCity = null; // Clear city string lock
-                        fetchWeatherAndForecast();
-                        locationBtn.classList.remove("loading");
-                    },
-                    (error) => {
-                        alert("Geolocation access denied or unavailable.");
-                        locationBtn.classList.remove("loading");
-                    }
-                );
-            } else {
-                alert("Geolocation is not supported by your browser.");
-            }
+            autoDetectLocation();
         });
 
         // Unit Toggle Handlers
@@ -250,7 +281,7 @@
                 updateBodyTheme(weatherData.weather[0].main);
                 
                 if (weatherData.name) {
-                    saveToSearchHistory(weatherData.name);
+                    saveToSearchHistory(weatherData.name, weatherData.sys ? weatherData.sys.country : "");
                 }
             } catch (err) {
                 console.error(err);
@@ -398,14 +429,44 @@
 
         // Search history implementation
         function loadSearchHistory() {
-            let history = JSON.parse(localStorage.getItem("weather_searches")) || ["London", "New York", "Tokyo", "Paris"];
+            let history = JSON.parse(localStorage.getItem("weather_searches"));
+            if (!history) {
+                history = [
+                    { name: "Mumbai", country: "IN" },
+                    { name: "Delhi", country: "IN" },
+                    { name: "Bengaluru", country: "IN" },
+                    { name: "London", country: "GB" },
+                    { name: "New York", country: "US" }
+                ];
+                localStorage.setItem("weather_searches", JSON.stringify(history));
+            }
+
+            // Normalize history items to objects
+            history = history.map(item => {
+                if (typeof item === "string") {
+                    const isIndian = indianCities.has(item.toLowerCase());
+                    return { name: item, country: isIndian ? "IN" : "" };
+                }
+                return item;
+            });
+
+            // Prioritize India-based locations (country === "IN" or name is matched in Indian cities list)
+            const indiaLocations = history.filter(item => item.country === "IN" || indianCities.has(item.name.toLowerCase()));
+            const otherLocations = history.filter(item => item.country !== "IN" && !indianCities.has(item.name.toLowerCase()));
+            const prioritizedHistory = [...indiaLocations, ...otherLocations].slice(0, 5); // Limit to top 5 tags
+
             recentTagsContainer.innerHTML = "";
-            history.forEach(city => {
+            prioritizedHistory.forEach(cityObj => {
                 const tag = document.createElement("span");
                 tag.className = "recent-tag";
-                tag.innerHTML = city;
+                // Premium visual touch: add Indian flag for India-based prioritized locations
+                if (cityObj.country === "IN" || indianCities.has(cityObj.name.toLowerCase())) {
+                    tag.innerHTML = `🇮🇳 ${cityObj.name}`;
+                } else {
+                    tag.innerHTML = cityObj.name;
+                }
                 tag.addEventListener("click", () => {
-                    currentCity = city;
+                    currentCity = cityObj.name;
                     currentCoords = null;
                     fetchWeatherAndForecast();
                 });
@@ -413,15 +474,35 @@
             });
         }
 
-        function saveToSearchHistory(cityName) {
-            let history = JSON.parse(localStorage.getItem("weather_searches")) || ["London", "New York", "Tokyo", "Paris"];
-            
-            // Remove duplicates
-            history = history.filter(c => c.toLowerCase() !== cityName.toLowerCase());
-            // Insert at beginning
-            history.unshift(cityName);
-            // Cap at 5 tags
-            if (history.length > 5) history.pop();
+        function saveToSearchHistory(cityName, countryCode) {
+            let history = JSON.parse(localStorage.getItem("weather_searches"));
+            if (!history) {
+                history = [
+                    { name: "Mumbai", country: "IN" },
+                    { name: "Delhi", country: "IN" },
+                    { name: "Bengaluru", country: "IN" },
+                    { name: "London", country: "GB" },
+                    { name: "New York", country: "US" }
+                ];
+            }
+
+            // Normalize items
+            history = history.map(item => {
+                if (typeof item === "string") {
+                    const isIndian = indianCities.has(item.toLowerCase());
+                    return { name: item, country: isIndian ? "IN" : "" };
+                }
+                return item;
+            });
+
+            // Remove duplicate
+            history = history.filter(item => item.name.toLowerCase() !== cityName.toLowerCase());
+
+            // Add new city at the beginning
+            history.unshift({ name: cityName, country: countryCode || "" });
+
+            // Limit stored history to 10 items to prevent losing other recent entries while sorting/filtering
+            if (history.length > 10) history.pop();
 
             localStorage.setItem("weather_searches", JSON.stringify(history));
             loadSearchHistory();
